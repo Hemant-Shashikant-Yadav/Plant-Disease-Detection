@@ -87,7 +87,7 @@ his = model.fit(train_generator, steps_per_epoch=step_size_train, epochs=15, val
 
 hist_df = pd.DataFrame(his.history)
 
-hist_json_file = 'history.json'
+hist_json_file = '../../graph/20 new/history.json'
 with open(hist_json_file, mode='w') as f:
     hist_df.to_json(f)
 

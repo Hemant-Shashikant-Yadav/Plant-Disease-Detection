@@ -2,7 +2,8 @@ from keras.applications.mobilenet import preprocess_input
 from keras.models import load_model
 from keras import backend as K
 from matplotlib import pyplot as plt
-from skimage.segmentation import mark_boundaries
+from lime.lime_image import LimeImageExplainer
+
 
 
 def recall_m(y_true, y_pred):
@@ -30,14 +31,14 @@ custom_objects = {'f1_m': f1_m, 'precision_m': precision_m, 'recall_m': recall_m
 # Load the saved model
 # loaded_model = load_model("Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\\tempMobileNet Transfer Learning111.h5")
 loaded_model = load_model(
-    "Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\\tempMobileNet Transfer Learning111.h5",
+    "/v1.2/Saved models/SavedModelPlantDetectionMLModel3.h5",
     custom_objects=custom_objects)
 
 from keras.preprocessing import image
 import numpy as np
 
 # Load and preprocess the image to be predicted
-img_path = 'Y:\Coding\Project\Apple\Plant Disease Detection\Datasets\Full dataset\\test\\test\AppleCedarRust2.JPG'  # Replace with the path to your image
+img_path = '/Datasets/Full dataset/test/test/AppleCedarRust2.JPG'  # Replace with the path to your image
 # img = image.load_img(img_path, target_size=(256, 256))
 img = image.load_img(img_path)
 
@@ -61,28 +62,67 @@ class_labels = ['apple scab', 'apple rot', 'apple cedar rust', 'apple healthy'] 
 predicted_class = class_labels[predicted_class_index]
 print(f"The predicted class is: {predicted_class}")
 
-from lime.lime_image import LimeImageExplainer
-from keras.preprocessing.image import load_img
-
+from skimage.segmentation import slic
+from skimage.segmentation import mark_boundaries
 
 def explainDecision():
-    # Load the input image
+    # # Load the input image
+    #
+    # # Create a LIME explainer
+    #
+    # # Generate an explanation for the image
+    #
+    # input_image = image.load_img(img_path)
+    #
+    # original_img = np.array(input_image)
+    #
+    # img_array = image.img_to_array(input_image)
+    #
+    # segments = slic(img_array, n_segments=100, compactness=10, sigma=1)
+    # explainer = LimeImageExplainer()
+    #
+    # explanation = explainer.explain_instance(img1, loaded_model.predict, top_labels=4, hide_color=0, num_samples=5000, segmentation_fn=segments)
+    #
+    # temp, mask = explanation.get_image_and_mask(explanation.top_labels[0], positive_only=True, num_features=50,
+    #                                             hide_rest=True)
+    #
+    # masked_image = mark_boundaries(original_img / 256, mask, color=(1, 0, 0))
+    #
+    # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+    # ax1.imshow(input_image)
+    # ax1.set_title('Original Image')
+    # ax2.imshow(masked_image)
+    # ax2.set_title('LIME Explanation')
+    # plt.show()
+    from lime import lime_image
+    from skimage.segmentation import slic
+    from tensorflow.keras.preprocessing import image
+    from skimage.segmentation import mark_boundaries
+    import numpy as np
+    import matplotlib.pyplot as plt
 
-    # Create a LIME explainer
-    explainer = LimeImageExplainer()
+    # Load the input image
+    input_image = image.load_img(img_path)
+
+    # Convert input image to numpy array
+    original_img = np.array(input_image)
+    img_array = image.img_to_array(input_image)
+
+    # Apply SLIC segmentation directly to the image array
+    segments = slic(img_array, n_segments=100, compactness=10, sigma=1)
+
+    # Create a LIME explainer with the segmentation information
+    explainer = lime_image.LimeImageExplainer(segmentation_fn=segments)
 
     # Generate an explanation for the image
-    explanation = explainer.explain_instance(img1, loaded_model.predict, top_labels=4, hide_color=0, num_samples=5000)
-    print(explanation.top_labels[0:10])
+    explanation = explainer.explain_instance(img_array, loaded_model.predict, top_labels=4, hide_color=0,
+                                             num_samples=5000)
 
-    input_image = load_img(img_path)
-    # Get the LIME mask for the top predicted class
-    temp, mask = explanation.get_image_and_mask(explanation.top_labels[0], positive_only=True, num_features=25,
+    # Get the LIME mask for the top predicted class with adjusted parameters
+    temp, mask = explanation.get_image_and_mask(explanation.top_labels[0], positive_only=True, num_features=50,
                                                 hide_rest=True)
 
     # Overlay the LIME mask on the original image
-    masked_image = mark_boundaries(temp / 2 + 0.5, mask)
-    original_img = np.array(input_image)
     masked_image = mark_boundaries(original_img / 256, mask, color=(1, 0, 0))
 
     # Display the original image and the LIME explanation

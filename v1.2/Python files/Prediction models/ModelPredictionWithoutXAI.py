@@ -36,7 +36,7 @@ from keras.preprocessing import image
 import numpy as np
 
 # Load and preprocess the image to be predicted
-img_path = 'Y:\Coding\Project\Apple\Plant Disease Detection\Datasets\Full dataset\\test\\test\AppleCedarRust1.JPG'  # Replace with the path to your image
+img_path = '/Datasets/Full dataset/test/test/AppleCedarRust1.JPG'  # Replace with the path to your image
 # img = image.load_img(img_path, target_size=(256, 256))
 img = image.load_img(img_path)
 
