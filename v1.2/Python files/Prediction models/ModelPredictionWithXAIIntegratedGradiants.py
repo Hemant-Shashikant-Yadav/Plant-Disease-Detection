@@ -83,19 +83,6 @@ interpolated_images = interpolate_images(
     alphas=alphas)
 
 
-# fig = plt.figure(figsize=(20, 20))
-#
-# i = 0
-# for alpha, image in zip(alphas[0::10], interpolated_images[0::10]):
-#     i += 1
-#     plt.subplot(1, len(alphas[0::10]), i)
-#     plt.title(f'alpha: {alpha:.1f}')
-#     plt.imshow(image)
-#     plt.axis('off')
-#
-# plt.tight_layout();
-
-
 def compute_gradients(images, target_class_idx):
     with tf.GradientTape() as tape:
         tape.watch(images)

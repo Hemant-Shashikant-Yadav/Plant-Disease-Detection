@@ -28,8 +28,9 @@ custom_objects = {'f1_m': f1_m, 'precision_m': precision_m, 'recall_m': recall_m
 
 # Load the saved model
 # loaded_model = load_model("Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\\tempMobileNet Transfer Learning111.h5")
+
 loaded_model = load_model(
-    "Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\\tempMobileNet Transfer Learning111.h5",
+    "Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\Saved models\SavedModelPlantDetectionMLModel3.h5",
     custom_objects=custom_objects)
 
 from keras.preprocessing import image
