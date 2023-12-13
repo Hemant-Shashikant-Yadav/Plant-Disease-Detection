@@ -5,9 +5,10 @@ from keras.preprocessing import image
 from keras.applications.mobilenet import preprocess_input
 from keras.models import load_model
 from keras import backend as K
+import json
+import base64
 
-class_labels = ['apple scab', 'apple rot', 'apple cedar rust', 'apple healthy']
-
+################################################################################################
 
 def read_image(file_name):
     image = tf.io.read_file(file_name)
@@ -15,22 +16,6 @@ def read_image(file_name):
     image = tf.image.convert_image_dtype(image, tf.float32)
     image = tf.image.resize_with_pad(image, target_height=256, target_width=256)
     return image
-
-
-img_paths = {
-    'A1': 'Y:\Coding\Project\Apple\Plant Disease Detection\Datasets\Apple dataset\\test\\test\AppleCedarRust2.JPG',
-    'A2': 'Y:\Coding\Project\Apple\Plant Disease Detection\Datasets\Apple dataset\\test\\test\AppleCedarRust4.JPG',
-}
-img_name_tensors = {name: read_image(img_path) for (name, img_path) in img_paths.items()}
-
-
-def top_k_predictions(img, k=4):
-    image_batch = tf.expand_dims(img, 0)
-    predictions = loaded_model(image_batch)
-    probs = tf.nn.softmax(predictions, axis=-1)
-    top_probs, top_idxs = tf.math.top_k(input=probs, k=k)
-    return top_probs[0]
-
 
 def recall_m(y_true, y_pred):
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
@@ -51,20 +36,51 @@ def f1_m(y_true, y_pred):
     recall = recall_m(y_true, y_pred)
     return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
 
-
 custom_objects = {'f1_m': f1_m, 'precision_m': precision_m, 'recall_m': recall_m}
 
-loaded_model = load_model(
+################################################################################################
+
+img_path = 'Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\Python files\Plant Validation Model\Prediction\img.png'
+img_name_tensors =read_image(img_path)
+
+################################################################################################
+
+def top_k_predictions(img, k,loaded_model,class_labels):
+    image_batch = tf.expand_dims(img, 0)
+    predictions = loaded_model(image_batch)
+    probs = tf.nn.softmax(predictions, axis=-1)
+    top_probs, top_idxs = tf.math.top_k(input=probs, k=k)
+    top_labels=class_labels[top_idxs[0][0].numpy()]
+    return top_labels, top_probs[0][0]
+
+################################################################################################
+
+PlantValidationsLables = ['It is a plant', 'It is not a plant'] 
+
+PlantValidationModel = load_model(
+    "Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\Python files\Plant Validation Model\PlantValiidationSavedModel.h5",
+    custom_objects=custom_objects)
+
+
+pred_label, pred_prob = top_k_predictions(img_tensor,2,PlantValidationModel,PlantValidationsLables)
+print(f'{pred_label}: {pred_prob:0.1%}')
+
+################################################################################################
+
+DiseaseDetectionLables = ['Apple Scab', 'Apple Rot', 'Apple Cedar Rust', 'Apple Healthy']
+
+DiseaseDetectionModel = load_model(
     "Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\Saved models\SavedModelPlantDetectionMLModel3.h5",
     custom_objects=custom_objects)
 
-for (name, img_tensor) in img_name_tensors.items():
-    pred_prob = top_k_predictions(img_tensor)
-    print(pred_prob)
+pred_label, pred_prob = top_k_predictions(img_tensor,3,DiseaseDetectionModel,DiseaseDetectionLables)
+print(f'{pred_label}: {pred_prob:0.1%}')
+
+################################################################################################
 
 baseline = tf.zeros(shape=(256, 256, 3))
 
-m_steps = 50
+m_steps = 20
 alphas = tf.linspace(start=0.0, stop=1.0, num=m_steps + 1)
 
 
@@ -79,21 +95,21 @@ def interpolate_images(baseline, image, alphas):
 
 interpolated_images = interpolate_images(
     baseline=baseline,
-    image=img_name_tensors['A1'],
+    image=img_name_tensors,
     alphas=alphas)
 
 
 def compute_gradients(images, target_class_idx):
     with tf.GradientTape() as tape:
         tape.watch(images)
-        logits = loaded_model(images)
+        logits = DiseaseDetectionModel(images)
         probs = tf.nn.softmax(logits, axis=-1)[:, target_class_idx]
     return tape.gradient(probs, images)
 
 
 path_gradients = compute_gradients(
     images=interpolated_images,
-    target_class_idx=4)
+    target_class_idx=3)
 
 
 def integral_approximation(gradients):
@@ -107,7 +123,7 @@ ig = integral_approximation(
     gradients=path_gradients)
 
 
-def integrated_gradients(baseline, image, target_class_idx, m_steps=50, batch_size=32):
+def integrated_gradients(baseline, image, target_class_idx, m_steps=30, batch_size=8):
     # Generate alphas.
     alphas = tf.linspace(start=0.0, stop=1.0, num=m_steps + 1)
 
@@ -144,20 +160,17 @@ def one_batch(baseline, image, alpha_batch, target_class_idx):
     gradient_batch = compute_gradients(images=interpolated_path_input_batch, target_class_idx=target_class_idx)
     return gradient_batch
 
+########################################################################################################################
 
-ig_attributions = integrated_gradients(baseline=baseline, image=img_name_tensors['A1'], target_class_idx=4, m_steps=240)
+ig_attributions = integrated_gradients(baseline=baseline, image=img_name_tensors, target_class_idx=3, m_steps=120)
 
-ig_attributions = integrated_gradients(baseline=baseline, image=img_name_tensors['A2'], target_class_idx=4, m_steps=240)
+############################################################################################################################
 
-
-# @title
-def plot_img_attributions(baseline, image, target_class_idx, m_steps=50, cmap=None, overlay_alpha=0.4):
+def plot_img_attributions_and_save(baseline, image, target_class_idx, m_steps=20, cmap=None, overlay_alpha=0.4, save_path=None):
     attributions = integrated_gradients(baseline=baseline, image=image, target_class_idx=target_class_idx,
                                         m_steps=m_steps)
+    save_path1 = '.\overlay_image.png'
 
-    # Sum of the attributions across color channels for visualization.
-    # The attribution mask shape is a grayscale image with height and width
-    # equal to the original image.
     attribution_mask = tf.reduce_sum(tf.math.abs(attributions), axis=-1)
 
     fig, axs = plt.subplots(nrows=2, ncols=2, squeeze=False, figsize=(8, 8))
@@ -165,7 +178,7 @@ def plot_img_attributions(baseline, image, target_class_idx, m_steps=50, cmap=No
     axs[0, 0].set_title('Baseline image')
     axs[0, 0].imshow(baseline)
     axs[0, 0].axis('off')
-
+    
     axs[0, 1].set_title('Original image')
     axs[0, 1].imshow(image)
     axs[0, 1].axis('off')
@@ -178,6 +191,34 @@ def plot_img_attributions(baseline, image, target_class_idx, m_steps=50, cmap=No
     axs[1, 1].imshow(attribution_mask, cmap=cmap)
     axs[1, 1].imshow(image, alpha=overlay_alpha)
     axs[1, 1].axis('off')
-
+    plt.savefig(save_path1)
     plt.tight_layout()
-    return fig
+
+    if save_path:
+        original_image_base64 = base64.b64encode(image.numpy()).decode('utf-8')
+        overlay_image_base64 = base64.b64encode(attribution_mask.numpy()).decode('utf-8')
+
+        data = {
+            'original_image': original_image_base64,
+            'overlay_image': overlay_image_base64,
+            'alpha': overlay_alpha,
+        }
+
+        with open(save_path, 'w') as json_file:
+            json.dump(data, json_file, indent=4)
+            print(f"JSON data saved to {save_path}")
+
+
+save_path = ".\\attributions_data.json"
+
+
+############################################################################################################################################
+
+_ = plot_img_attributions_and_save(image=img_name_tensors,
+                                   baseline=baseline,
+                                   target_class_idx=3,
+                                   m_steps=400,
+                                   cmap=plt.cm.inferno,
+                                   overlay_alpha=0.4,
+                                   save_path=save_path)
+
