@@ -1,12 +1,12 @@
-import tensorflow as tf
-import numpy as np
-from matplotlib import pyplot as plt
-from keras.preprocessing import image
-from keras.applications.mobilenet import preprocess_input
-from keras.models import load_model
-from keras import backend as K
+import os
+import tempfile
 import json
 import base64
+import tensorflow as tf
+from matplotlib import pyplot as plt
+from keras.models import load_model
+from keras import backend as K
+
 
 ################################################################################################
 
@@ -16,6 +16,7 @@ def read_image(file_name):
     image = tf.image.convert_image_dtype(image, tf.float32)
     image = tf.image.resize_with_pad(image, target_height=256, target_width=256)
     return image
+
 
 def recall_m(y_true, y_pred):
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
@@ -36,22 +37,25 @@ def f1_m(y_true, y_pred):
     recall = recall_m(y_true, y_pred)
     return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
 
+
 custom_objects = {'f1_m': f1_m, 'precision_m': precision_m, 'recall_m': recall_m}
 
 ################################################################################################
 
-img_path = 'Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\Python files\Prediction models\img_2.png'
-img_name_tensors =read_image(img_path)
+img_path = 'Y:\Coding\Project\Apple\Plant Disease Detection\v1.2\Python files\Prediction models\car.jpg'
+img_name_tensors = read_image(img_path)
+
 
 ################################################################################################
 
-def top_k_predictions(img, k,loaded_model,class_labels):
+def top_k_predictions(img, k, loaded_model, class_labels):
     image_batch = tf.expand_dims(img, 0)
     predictions = loaded_model(image_batch)
     probs = tf.nn.softmax(predictions, axis=-1)
     top_probs, top_idxs = tf.math.top_k(input=probs, k=k)
-    top_labels=class_labels[top_idxs[0][0].numpy()]
+    top_labels = class_labels[top_idxs[0][0].numpy()]
     return top_labels, top_probs[0][0]
+
 
 ################################################################################################
 
@@ -123,101 +127,10 @@ ig = integral_approximation(
 
 
 def integrated_gradients(baseline, image, target_class_idx, m_steps=30, batch_size=8):
-    # Generate alphas.
     alphas = tf.linspace(start=0.0, stop=1.0, num=m_steps + 1)
-
-    # Collect gradients.
     gradient_batches = []
 
-    # Iterate alphas range and batch computation for speed, memory efficiency, and scaling to larger m_steps.
     for alpha in tf.range(0, len(alphas), batch_size):
         from_ = alpha
         to = tf.minimum(from_ + batch_size, len(alphas))
         alpha_batch = alphas[from_:to]
-
-        gradient_batch = one_batch(baseline, image, alpha_batch, target_class_idx)
-        gradient_batches.append(gradient_batch)
-
-    # Concatenate path gradients together row-wise into single tensor.
-    total_gradients = tf.concat(gradient_batches, axis=0)
-
-    # Integral approximation through averaging gradients.
-    avg_gradients = integral_approximation(gradients=total_gradients)
-
-    # Scale integrated gradients with respect to input.
-    integrated_gradients = (image - baseline) * avg_gradients
-
-    return integrated_gradients
-
-
-@tf.function
-def one_batch(baseline, image, alpha_batch, target_class_idx):
-    # Generate interpolated inputs between baseline and input.
-    interpolated_path_input_batch = interpolate_images(baseline=baseline, image=image, alphas=alpha_batch)
-
-    # Compute gradients between model outputs and interpolated inputs.
-    gradient_batch = compute_gradients(images=interpolated_path_input_batch, target_class_idx=target_class_idx)
-    return gradient_batch
-
-########################################################################################################################
-
-ig_attributions = integrated_gradients(baseline=baseline, image=img_name_tensors, target_class_idx=3, m_steps=120)
-
-############################################################################################################################
-
-def plot_img_attributions_and_save(baseline, image, target_class_idx, m_steps=20, cmap=None, overlay_alpha=0.4, save_path=None):
-    attributions = integrated_gradients(baseline=baseline, image=image, target_class_idx=target_class_idx,
-                                        m_steps=m_steps)
-    save_path1 = '.\overlay_image1.png'
-
-    attribution_mask = tf.reduce_sum(tf.math.abs(attributions), axis=-1)
-
-    fig, axs = plt.subplots(nrows=2, ncols=2, squeeze=False, figsize=(8, 8))
-
-    axs[0, 0].set_title('Baseline image')
-    axs[0, 0].imshow(baseline)
-    axs[0, 0].axis('off')
-
-    axs[0, 1].set_title('Original image')
-    axs[0, 1].imshow(image)
-    axs[0, 1].axis('off')
-
-    axs[1, 0].set_title('Attribution mask')
-    axs[1, 0].imshow(attribution_mask, cmap=cmap)
-    axs[1, 0].axis('off')
-
-    axs[1, 1].set_title('Overlay')
-    axs[1, 1].imshow(attribution_mask, cmap=cmap)
-    axs[1, 1].imshow(image, alpha=overlay_alpha)
-    axs[1, 1].axis('off')
-    plt.savefig(save_path1)
-    plt.tight_layout()
-
-    if save_path:
-        original_image_base64 = base64.b64encode(image.numpy()).decode('utf-8')
-        overlay_image_base64 = base64.b64encode(attribution_mask.numpy()).decode('utf-8')
-
-        data = {
-            'original_image': original_image_base64,
-            'overlay_image': overlay_image_base64,
-            'alpha': overlay_alpha,
-        }
-
-        with open(save_path, 'w') as json_file:
-            json.dump(data, json_file, indent=4)
-            print(f"JSON data saved to {save_path}")
-
-
-save_path = ".\\attributions_data.json"
-
-
-############################################################################################################################################
-
-_ = plot_img_attributions_and_save(image=img_name_tensors,
-                                   baseline=baseline,
-                                   target_class_idx=3,
-                                   m_steps=400,
-                                   cmap=plt.cm.inferno,
-                                   overlay_alpha=0.4,
-                                   save_path=save_path)
-

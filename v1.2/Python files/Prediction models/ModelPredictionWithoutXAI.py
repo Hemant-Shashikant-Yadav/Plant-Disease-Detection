@@ -37,23 +37,29 @@ from keras.preprocessing import image
 import numpy as np
 
 # Load and preprocess the image to be predicted
-img_path = '/Datasets/Full dataset/test/test/AppleCedarRust1.JPG'  # Replace with the path to your image
+img_path = 'Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\Python files\Prediction models\\img_3.png'  # Replace with the path to your image
 # img = image.load_img(img_path, target_size=(256, 256))
 img = image.load_img(img_path)
-
+print(type(img))
 img = image.img_to_array(img)
+print(type(img))
 # print(img.shape)
 img = np.expand_dims(img, axis=0)
+print(type(img))
 # print(img.shape)
 img = preprocess_input(img)
+print(type(img))
 # print(img.shape)
 
 # Make predictions
 predictions = loaded_model.predict(img)
-
 # Get the predicted class
-predicted_class_index = np.argmax(predictions)
+
+# Make predictions
 
 class_labels = ['apple scab', 'apple rot', 'apple cedar rust', 'apple healthy']  # Replace with your actual class labels
-predicted_class = class_labels[predicted_class_index]
-print(f"The predicted class is: {predicted_class}")
+
+# Print confidence for each class
+for i in range(len(class_labels)):
+    confidence = predictions[0][i]
+    print(f"Confidence for {class_labels[i]}: {confidence * 100:.2f}%")

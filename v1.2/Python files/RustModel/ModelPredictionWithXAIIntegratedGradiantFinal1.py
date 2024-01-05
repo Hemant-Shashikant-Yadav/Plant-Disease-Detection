@@ -1,12 +1,12 @@
+from io import BytesIO
+
 import tensorflow as tf
-import numpy as np
 from matplotlib import pyplot as plt
-from keras.preprocessing import image
-from keras.applications.mobilenet import preprocess_input
 from keras.models import load_model
 from keras import backend as K
 import json
 import base64
+
 
 ################################################################################################
 
@@ -16,6 +16,7 @@ def read_image(file_name):
     image = tf.image.convert_image_dtype(image, tf.float32)
     image = tf.image.resize_with_pad(image, target_height=256, target_width=256)
     return image
+
 
 def recall_m(y_true, y_pred):
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
@@ -36,22 +37,25 @@ def f1_m(y_true, y_pred):
     recall = recall_m(y_true, y_pred)
     return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
 
+
 custom_objects = {'f1_m': f1_m, 'precision_m': precision_m, 'recall_m': recall_m}
 
 ################################################################################################
 
-img_path = 'Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\Python files\Prediction models\img_2.png'
-img_name_tensors =read_image(img_path)
+img_path = 'Y:\Coding\Project\Apple\Plant Disease Detection\\v1.2\Python files\Prediction models\A.JPG'
+img_name_tensors = read_image(img_path)
+
 
 ################################################################################################
 
-def top_k_predictions(img, k,loaded_model,class_labels):
+def top_k_predictions(img, k, loaded_model, class_labels):
     image_batch = tf.expand_dims(img, 0)
     predictions = loaded_model(image_batch)
     probs = tf.nn.softmax(predictions, axis=-1)
     top_probs, top_idxs = tf.math.top_k(input=probs, k=k)
-    top_labels=class_labels[top_idxs[0][0].numpy()]
+    top_labels = class_labels[top_idxs[0][0].numpy()]
     return top_labels, top_probs[0][0]
+
 
 ################################################################################################
 
@@ -112,7 +116,6 @@ path_gradients = compute_gradients(
 
 
 def integral_approximation(gradients):
-    # riemann_trapezoidal
     grads = (gradients[:-1] + gradients[1:]) / tf.constant(2.0)
     integrated_gradients = tf.math.reduce_mean(grads, axis=0)
     return integrated_gradients
@@ -159,16 +162,19 @@ def one_batch(baseline, image, alpha_batch, target_class_idx):
     gradient_batch = compute_gradients(images=interpolated_path_input_batch, target_class_idx=target_class_idx)
     return gradient_batch
 
+
 ########################################################################################################################
 
 ig_attributions = integrated_gradients(baseline=baseline, image=img_name_tensors, target_class_idx=3, m_steps=120)
 
+
 ############################################################################################################################
 
-def plot_img_attributions_and_save(baseline, image, target_class_idx, m_steps=20, cmap=None, overlay_alpha=0.4, save_path=None):
+
+def plot_img_attributions_and_save(baseline, image, target_class_idx, m_steps=20, cmap=None, overlay_alpha=0.4,
+                                   save_path=None):
     attributions = integrated_gradients(baseline=baseline, image=image, target_class_idx=target_class_idx,
                                         m_steps=m_steps)
-    save_path1 = '.\overlay_image1.png'
 
     attribution_mask = tf.reduce_sum(tf.math.abs(attributions), axis=-1)
 
@@ -183,33 +189,34 @@ def plot_img_attributions_and_save(baseline, image, target_class_idx, m_steps=20
     axs[0, 1].axis('off')
 
     axs[1, 0].set_title('Attribution mask')
-    axs[1, 0].imshow(attribution_mask, cmap=cmap)
+    axs[1, 0].imshow(attribution_mask, cmap=cmap or 'viridis')
     axs[1, 0].axis('off')
 
     axs[1, 1].set_title('Overlay')
-    axs[1, 1].imshow(attribution_mask, cmap=cmap)
+    axs[1, 1].imshow(attribution_mask, cmap=cmap or 'viridis')
     axs[1, 1].imshow(image, alpha=overlay_alpha)
     axs[1, 1].axis('off')
-    plt.savefig(save_path1)
-    plt.tight_layout()
 
+    # Convert the images to base64-encoded strings
+    images_base64 = {}
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    images_base64[f'image'] = image_base64
+
+    # Save the JSON object to a local directory
     if save_path:
-        original_image_base64 = base64.b64encode(image.numpy()).decode('utf-8')
-        overlay_image_base64 = base64.b64encode(attribution_mask.numpy()).decode('utf-8')
+        json_path = save_path
+        with open(json_path, 'w') as json_file:
+            json.dump(images_base64, json_file, indent=4)
 
-        data = {
-            'original_image': original_image_base64,
-            'overlay_image': overlay_image_base64,
-            'alpha': overlay_alpha,
-        }
+    plt.close()  # Close the figure to avoid displaying the plot
 
-        with open(save_path, 'w') as json_file:
-            json.dump(data, json_file, indent=4)
-            print(f"JSON data saved to {save_path}")
+    return json_path
 
 
 save_path = ".\\attributions_data.json"
-
 
 ############################################################################################################################################
 
@@ -220,4 +227,3 @@ _ = plot_img_attributions_and_save(image=img_name_tensors,
                                    cmap=plt.cm.inferno,
                                    overlay_alpha=0.4,
                                    save_path=save_path)
-
