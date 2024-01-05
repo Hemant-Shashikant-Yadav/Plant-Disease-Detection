@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The BHarat Coders</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        form {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        label {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 33px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #3498db;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .custom-file-input {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 33px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #3498db;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .custom-file-input:hover {
+            background-color: #2980b9;
+        }
+
+        /* Style for the file input visually hidden */
+        #image-selector {
+            display: none;
+        }
+
+        /* Style for the label that mimics the file input */
+        #file-label {
+            display: block;
+            padding: 10px 20px;
+            margin: 20px;
+            font-size: 31px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #3498db;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        #file-label:hover {
+            background-color: #2980b9;
+        }
+
+
+        #predict-button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 33px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #27ae60;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        #predict-button:hover {
+            background-color: #219653;
+        }
+
+        p {
+            font-size: 33px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        span {
+            font-weight: bold;
+            color: #27ae60;
+        }
+        nav{
+            background-color: #333;
+            padding: 10px;
+            text-align: left;
+            position: absolute;
+            top: 0;
+            width: -webkit-fill-available;
+            font-family: sans-serif;
+            font-size: x-large;
+        }
+    </style>
+</head>
+
+<body>
+<nav style="background-color: #333; padding: 10px;">
+    <h1 style="color: #fff;">The Bharat Coders - Plant Disease Detection</h1>
+</nav>
+<form id="image-form">
+    <input id="image-selector" type="file" name="image">
+    <!-- Label mimicking the file input -->
+    <label for="image-selector" id="file-label" class="custom-file-input">Select Image</label>
+    <button type="button" id="predict-button">Predict</button>
+</form>
+<p style="font-weight: bold">Predictions</p>
+<p>Plant Label: <span id="plantLabel"></span></p>
+<img id="selected-image" src=""/>
+<script>
+    document.getElementById("predict-button").addEventListener("click", function () {
+        let fileInput = document.getElementById("image-selector");
+        let file = fileInput.files[0];
+
+        if (!file) {
+            alert("Please select an image.");
+            return;
+        }
+
+        let reader = new FileReader();
+        reader.onload = function (e) {
+            let base64Image = e.target.result.split(",")[1];
+
+            let formData = new FormData();
+            formData.append("image", file);
+            formData.append("base64Image", base64Image);
+
+            fetch("http://192.168.29.177:5000/predict", {
+                method: "POST",
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("plantLabel").textContent = data.prediction.plantLabel;
+                    console.log(data.prediction.plantLabel);
+                    let base64Image = data.prediction.imagefile;
+                    let img = new Image();
+                    img.src = "data:image/png;base64," + base64Image;
+
+                    img.onload = function () {
+                        document.getElementById("selected-image").src = img.src;
+                    };
+                    console.log(data);
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                });
+        };
+
+        reader.readAsDataURL(file);
+    });
+</script>
+</body>
+
+</html>
