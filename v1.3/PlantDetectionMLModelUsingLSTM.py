@@ -86,7 +86,7 @@ hist_json_file = 'history.json'
 with open(hist_json_file, mode='w') as f:
     hist_df.to_json(f)
 
-model.save("SavedModelMLModel.h5")
+model.save("SavedModelMLModelFile.h5")
 
 loss, accuracy, f1_m, precision_m, recall_m = model.evaluate(test_generator)
 print(f"Test Loss: {loss}")
