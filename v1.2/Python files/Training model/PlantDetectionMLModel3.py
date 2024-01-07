@@ -1,13 +1,12 @@
 import pandas as pd
 from keras import backend as K
-from keras.layers.core import Dense, Activation, Dropout
+from keras.layers.core import Dropout
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Model
 from keras.layers import Dense, GlobalAveragePooling2D
 from keras.applications.mobilenet import preprocess_input, MobileNet
 from tensorflow.keras.optimizers import Adam
 
-from tensorflow.python.keras.callbacks import History
 
 base_model = MobileNet(weights='imagenet', include_top=False)
 
