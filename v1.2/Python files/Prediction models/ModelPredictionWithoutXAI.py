@@ -59,7 +59,7 @@ predictions = loaded_model.predict(img)
 
 class_labels = ['apple scab', 'apple rot', 'apple cedar rust', 'apple healthy']  # Replace with your actual class labels
 
-# Print confidence for each class
+# Print confidence for each class addhs s
 for i in range(len(class_labels)):
     confidence = predictions[0][i]
     print(f"Confidence for {class_labels[i]}: {confidence * 100:.2f}%")
