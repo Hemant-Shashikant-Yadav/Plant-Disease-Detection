@@ -78,7 +78,7 @@ model.compile(
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
     metrics=['accuracy']
 )
-
+##without transfer learning
 history = model.fit(
     trainDataset,
     batch_size=32,
