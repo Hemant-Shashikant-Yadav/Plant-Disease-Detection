@@ -42,7 +42,7 @@ train_datagen = ImageDataGenerator(
 test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
 
 train_generator = train_datagen.flow_from_directory(
-    'Y:\Coding\Jupyter\Plant Disease Detection\Datasets\Apple dataset\PlantDiseasesDataset\\train',
+    'train',
     target_size=(256, 256),
     color_mode='rgb',
     batch_size=32,
