@@ -51,7 +51,7 @@ train_generator = train_datagen.flow_from_directory(
 )
 
 test_generator = test_datagen.flow_from_directory(
-    'Y:\Coding\Jupyter\Plant Disease Detection\Datasets\Apple dataset\PlantDiseasesDataset\\valid',
+    'valid',
     target_size=(256, 256),
     color_mode='rgb',
     batch_size=32,
