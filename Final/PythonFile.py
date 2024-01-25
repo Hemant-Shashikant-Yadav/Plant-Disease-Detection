@@ -4,7 +4,7 @@ from flask import Flask, request, render_template
 from keras.applications.mobilenet import preprocess_input
 from keras.models import load_model
 from keras import backend as K
-from matplotlib import pyplot as pltp
+from matplotlib import pyplot as plt
 
 plt.switch_backend('agg')
 from tensorflow.keras.preprocessing.image import img_to_array
@@ -253,4 +253,4 @@ def predict():
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.29.177', port=4000)
+    app.run(host='192.168.29.177', port=5000)
