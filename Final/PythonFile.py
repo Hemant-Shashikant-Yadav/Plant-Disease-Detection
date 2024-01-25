@@ -253,4 +253,4 @@ def predict():
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.29.177', port=5000)
+    app.run(host='192.168.29.106', port=4000)
