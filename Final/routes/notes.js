@@ -23,8 +23,8 @@ router.post(
             .trim()
             .isLength({ min: 1 }),
     ],
-        async (req, res) => {
-            try {
+    async (req, res) => {
+        try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
                 res.status(400).json({ errors });
@@ -34,6 +34,7 @@ router.post(
             let formData = new FormData();
             let img;
             let lable1;
+            let newNote;
             formData.append("baseImage", base64Image);
             await fetch("http://192.168.128.167:4000/predict", {
                 method: "POST",
@@ -42,16 +43,17 @@ router.post(
                 .then(response => response.json())
                 .then(data => {
                     let base64Image = data.prediction.imagefile;
-                    lable1 = data.prediction.plantLabel;
                     img = "data:image/png;base64," + base64Image;
+                    newNote = new Notes({
+                        user: req.user.id,
+                        baseImage: img,
+                        date: Date.now(),
+                        title: data.prediction.plantLabel
+                    });
+
                 })
 
-            const newNote = new Notes({
-                user: req.user.id,
-                baseImage: img,
-                date: Date.now(),
-                title: lable1
-            });
+
             const savedNote = await newNote.save();
             res.send(savedNote);
         } catch (e) {
