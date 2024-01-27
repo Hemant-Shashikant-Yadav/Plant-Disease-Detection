@@ -175,20 +175,27 @@ def plot_img_attributions_and_return(baseline, image, target_class_idx, m_steps=
 
     return images_base64
 
-@app.route('/')
-def index():
-    return render_template('qqqindex.html')
-#s
-
 @app.route("/predict", methods=["POST"])
 def predict():
-    image_file = request.files['image']
-    base64_image = request.form['base64Image']
-    image = Image.open(image_file)
+    print(1)
+    # image_file = request.files['image']
+    # image = Image.open(image_file)
+    base64_image = request.form['baseImage']
+
+    image_data = base64.b64decode(base64_image)
+
+    image_bytes = io.BytesIO(image_data)
+
+    image1 = Image.open(image_bytes)
+    print(image1)
+    print(type(image1))
+
+
 
     load_models()
 
-    processed_image = preprocess_image(image)
+
+    processed_image = preprocess_image(image1)
 
     prediction = PlantValidationModel.predict(processed_image).tolist()
     predicted_class_index = np.argmax(prediction)
@@ -210,7 +217,7 @@ def predict():
         confidence = prediction1[0][i]
         print(f"Confidence for {DiseaseDetectionLables[i]}: {confidence * 100:.2f}%")
 
-    image_array = np.array(image)
+    image_array = np.array(image1)
 
     if image_array.shape[-1] == 4:
         image_array = image_array[:, :, :3]
@@ -233,10 +240,6 @@ def predict():
         images=interpolated_images,
         target_class_idx=3)
 
-    ig = integral_approximation(
-        gradients=path_gradients)
-
-    ig_attributions = integrated_gradients(baseline=baseline, image=img_name_tensors, target_class_idx=3, m_steps=120)
 
     xai = plot_img_attributions_and_return(image=img_name_tensors,
                                            baseline=baseline,
@@ -255,4 +258,4 @@ def predict():
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.29.106', port=5000)
+    app.run(host='192.168.29.106', port=4000)

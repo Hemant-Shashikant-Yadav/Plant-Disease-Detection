@@ -1,15 +1,19 @@
-import { Router } from "express";
-const router = Router();
-import fetchuser from "../middleware/fetchuser";
-import Notes, { find, findById, findByIdAndUpdate, findByIdAndDelete } from "../models/Notes";
-import { body, validationResult } from "express-validator";
+const express = require("express");
+const router = express.Router();
+const fetchuser = require("../middleware/fetchuser");
+const Notes = require("../models/Notes");
+const { body, validationResult } = require("express-validator");
 
 // endpoint --> /api/notes/getallnotes. Login required
 router.get("/getallnotes", fetchuser, async (req, res) => {
-    const notes = await find({ user: req.user.id });
-    res.json(notes);
+    try {
+        const notes = await Notes.find({ user: req.user.id });
+        res.json(notes);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
+    }
 });
-
 // endpoint --> /api/notes/addnote. Login required
 router.post(
     "/addnote",
@@ -26,14 +30,26 @@ router.post(
                 res.status(400).json({ errors });
                 return; // Important: Add a return statement to exit the function here
             }
+            let base64Image = req.body.baseImage.split(",")[1];
+            let formData = new FormData();
+            let img;
+            formData.append("baseImage", base64Image);
+            await fetch("http://192.168.29.106:4000/predict", {
+                method: "POST",
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    let base64Image = data.prediction.imagefile;
+                    img = "data:image/png;base64," + base64Image;
+                })
+
             const newNote = new Notes({
                 user: req.user.id,
-                baseImage: req.body.baseImage,
+                baseImage: img,
                 date: Date.now(),
             });
             const savedNote = await newNote.save();
-            // add hemant's code
-
             res.send(savedNote);
         } catch (e) {
             res.status(500).send("database connectivity error");
@@ -90,4 +106,7 @@ router.delete("/deletenote/:id", fetchuser, async (req, res) => {
     }
 });
 
-export default router;
+module.exports = router;
+
+
+
