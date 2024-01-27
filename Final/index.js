@@ -16,3 +16,6 @@ app.use("/api/auth", require("./routes/auth"));
 app.listen(port, () => {
     console.log(`Listening the app at http://localhost:${port}`);
 });
+
+
+
