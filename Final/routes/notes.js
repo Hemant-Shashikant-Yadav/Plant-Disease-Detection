@@ -36,7 +36,7 @@ router.post(
             let lable1;
             let newNote;
             formData.append("baseImage", base64Image);
-            await fetch("http://192.168.137.154:4000/predict", {
+            await fetch("http://192.168.29.106:4000/predict", {
                 method: "POST",
                 body: formData
             })
